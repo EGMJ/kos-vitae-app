@@ -1,46 +1,7 @@
-version: "3.9"
-
 services:
-  web:
-    build:
-      context: ..
-      dockerfile: .devcontainer/web.dockerfile
-    container_name: kosvitae-web
-    command: [ "bash", "-lc", "cd apps/web && npm run dev" ]
-    volumes:
-      - ..:/workspaces/kos-vitae:cached
-      - web_node_modules:/workspaces/kos-vitae/apps/web/node_modules
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NODE_ENV=development
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-      - db
-
-  api:
-    build:
-      context: ..
-      dockerfile: .devcontainer/api.dockerfile
-    container_name: kosvitae-api
-    command: [ "bash", "-lc", "cd apps/api && uvicorn app:app --host 0.0.0.0 --port 8000 --reload" ]
-    volumes:
-      - ..:/workspaces/kos-vitae:cached
-      - api_venv:/home/vscode/.venv
-    environment:
-      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/kosvitae
-      - PYTHONUNBUFFERED=1
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-
   db:
     image: postgres:16
     container_name: kosvitae-db
-    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -51,11 +12,11 @@ services:
       - pg_data:/var/lib/postgresql/data
       - ../db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d kosvitae" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kosvitae} -h 127.0.0.1"]
       interval: 2s
       timeout: 2s
       retries: 30
-
+      
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: kosvitae-pgadmin
@@ -66,6 +27,112 @@ services:
       - "5050:80"
     depends_on:
       - db
+
+  api:
+    build:
+      context: ..
+      dockerfile: .devcontainer/api.dockerfile
+    container_name: kosvitae-api
+    command: ["bash","-lc","cd apps/api && /home/vscode/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000 --reload"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/kosvitae
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ..:/workspaces/kos-vitae:cached
+      - api_venv:/home/vscode/.venv
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: .devcontainer/web.dockerfile
+    container_name: kosvitae-web
+    command: ["bash","-lc","cd apps/web && npm run dev"]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NODE_ENV: development
+    volumes:
+      - ..:/workspaces/kos-vitae:cached
+      - web_node_modules:/workspaces/kos-vitae/apps/web/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_started
+
+
+# services:
+#   web:
+#     build:
+#       context: ..
+#       dockerfile: .devcontainer/web.dockerfile
+#     container_name: kosvitae-web
+#     command: [ "bash", "-lc", "cd apps/web && npm run dev" ]
+#     volumes:
+#       - ..:/workspaces/kos-vitae:cached
+#       - web_node_modules:/workspaces/kos-vitae/apps/web/node_modules
+#     environment:
+#       - NEXT_PUBLIC_API_URL=http://localhost:8000
+#       - NODE_ENV=development
+#     ports:
+#       - "3000:3000"
+#     depends_on:
+#       - api
+#       - db
+
+#   api:
+#     build:
+#       context: ..
+#       dockerfile: .devcontainer/api.dockerfile
+#     container_name: kosvitae-api
+#     command: ["bash","-lc","cd apps/api && /home/vscode/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000 --reload"]
+#     volumes:
+#       - ..:/workspaces/kos-vitae:cached
+#       - api_venv:/home/vscode/.venv
+#     environment:
+#       - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/kosvitae
+#       - PYTHONUNBUFFERED=1
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       db:
+#         condition: service_healthy
+
+#   db:
+#     image: postgres:16
+#     container_name: kosvitae-db
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: kosvitae
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - pg_data:/var/lib/postgresql/data
+#       - ../db/init:/docker-entrypoint-initdb.d:ro
+#     healthcheck:
+#       test: [ "CMD-SHELL", "pg_isready -U postgres -d kosvitae" ]
+#       interval: 2s
+#       timeout: 2s
+#       retries: 30
+
+#   pgadmin:
+#     image: dpage/pgadmin4:8
+#     container_name: kosvitae-pgadmin
+#     environment:
+#       PGADMIN_DEFAULT_EMAIL: dev@local.test
+#       PGADMIN_DEFAULT_PASSWORD: admin
+#     ports:
+#       - "5050:80"
+#     depends_on:
+#       - db
 
 volumes:
   web_node_modules:
