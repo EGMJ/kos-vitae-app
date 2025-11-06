@@ -1,0 +1,479 @@
+Project kos_vitae {
+  database_type: "PostgreSQL"
+  note: 'IDs = UUID (gen_random_uuid); datas = timestamptz; email = citext; dinheiro = numeric(12,2)'
+}
+
+/* ========= Núcleo ========= */
+
+Table Autenticacao {
+  id uuid [pk, note: 'DEFAULT gen_random_uuid()']
+  email citext [not null, unique]
+  senha_hash text
+  provedor_oauth text
+  oauth_sub text
+  mfa_secret text
+  ultimo_login_at timestamptz
+  tentativas_falhas int [default: 0]
+  ativo boolean [default: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+Table Profissional {
+  id uuid [pk]
+  autenticacao_id uuid [unique, ref: > Autenticacao.id]
+  nome text [not null]
+  cpf char(11) [unique]
+  crefito_numero text
+  telefone_e164 varchar(16)
+  email citext
+  endereco_id uuid [ref: > Endereco.id]
+  foto_url text
+  status_verificacao text
+  data_nascimento date
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+Table Paciente {
+  id uuid [pk]
+  nome text [not null]
+  cpf char(11) [unique]
+  data_nascimento date
+  sexo text
+  telefone_e164 varchar(16)
+  email citext
+  endereco_id uuid [ref: > Endereco.id]
+  responsavel_id uuid [ref: > Paciente.id]
+  tipo_pagador text [default: 'particular', note: "ENUM: particular|convenio"]
+  observacoes text
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+}
+
+// --- Pessoas relacionadas ao paciente (responsável) ---
+
+Table Responsavel {
+  id uuid [pk]
+  nome text
+  cpf char(11)
+  telefone_e164 varchar(16)
+  email citext
+  endereco_id uuid  // opcional
+  autenticacao_id uuid  // se o responsável tiver login próprio
+  created_at timestamptz [default: `now()`]
+}
+
+Table PacienteResponsavel {
+  id uuid [pk]
+  paciente_id uuid [not null, ref: > Paciente.id]
+  responsavel_id uuid [not null, ref: > Responsavel.id]
+  tipo_vinculo text  // ex.: pai, mãe, tutor, curador
+  representacao_legal boolean [default: true]
+  inicio_vigencia date
+  fim_vigencia date
+  observacoes text
+  Indexes { (paciente_id, responsavel_id) [unique] }
+}
+
+
+Table Endereco {
+  id uuid [pk]
+  logradouro text
+  numero text
+  complemento text
+  bairro text
+  cidade text
+  uf char(2)
+  cep char(8)
+  lat numeric(9,6)
+  lon numeric(9,6)
+}
+
+Table Convenio {
+  id uuid [pk]
+  nome text [not null]
+  cnpj char(14)
+  contato text
+  telefone_e164 varchar(16)
+  email citext
+}
+
+Table PlanoConvenio {
+  id uuid [pk]
+  convenio_id uuid [not null, ref: > Convenio.id]
+  nome text [not null]
+  codigo_plano text
+  regras_glosa jsonb
+}
+
+Table PacienteConvenio {
+  id uuid [pk]
+  paciente_id uuid [not null, ref: > Paciente.id]
+  plano_id uuid [not null, ref: > PlanoConvenio.id]
+  numero_carteira text
+  validade date
+  Indexes {
+    (paciente_id, plano_id) [unique]
+  }
+}
+
+Table Agenda {
+  id uuid [pk]
+  atendimento_id uuid [ref: > Atendimento.id]
+  titulo text
+  inicio timestamptz [not null]
+  fim timestamptz [not null]
+  rrule text
+  notificar boolean [default: false]
+  cor text
+  observacao text
+}
+
+Table Atendimento {
+  id uuid [pk]
+  paciente_id uuid [not null, ref: > Paciente.id]
+  profissional_id uuid [not null, ref: > Profissional.id]
+  local_endereco_id uuid [ref: > Endereco.id]
+  inicio timestamptz [not null]
+  duracao_min int [not null]
+  status text [default: 'agendado', note: "ENUM: agendado|em_andamento|concluido|cancelado|no_show"]
+}
+
+Table Prontuario {
+  id uuid [pk]
+  paciente_id uuid [not null, ref: > Paciente.id]
+  profissional_responsavel_id uuid [ref: > Profissional.id]
+  problema_resumo text
+  alergias text
+  objetivos text
+  plano_resumo text
+  sigilo boolean [default: true]
+}
+
+Table EvolucaoProntuario {
+  id uuid [pk]
+  prontuario_id uuid [not null, ref: > Prontuario.id]
+  atendimento_id uuid [ref: > Atendimento.id]
+  profissional_id uuid [ref: > Profissional.id]
+  anamnese text
+  avaliacao text
+  diagnostico text
+  intervencao text
+  evolucao text
+  registrado_em timestamptz [default: `now()`]
+  assinatura_id uuid [ref: > Assinatura.id]
+}
+
+Table Ponto {
+  id uuid [pk]
+  atendimento_id uuid [not null, ref: > Atendimento.id]
+  profissional_id uuid [not null, ref: > Profissional.id]
+  tipo text [not null, note: "ENUM: checkin|pausa|checkout"]
+  timestamp timestamptz [not null]
+  lat numeric(9,6)
+  lon numeric(9,6)
+  precisao_m numeric(8,2)
+  dispositivo_id text
+  observacao text
+  documento_id uuid [ref: > Documento.id]
+}
+
+Table Rota {
+  id uuid [pk]
+  profissional_id uuid [not null, ref: > Profissional.id]
+  data date [not null]
+  dist_total_km numeric(6,2)
+  tempo_estimado_min int
+}
+
+Table RotaParada {
+  id uuid [pk]
+  rota_id uuid [not null, ref: > Rota.id]
+  ordem smallint [not null]
+  endereco_id uuid [not null, ref: > Endereco.id]
+  paciente_id uuid [ref: > Paciente.id]
+  eta_min int
+  observacao text
+  Indexes {
+    (rota_id, ordem) [unique]
+  }
+}
+
+Table RotaLog {
+  id uuid [pk]
+  rota_id uuid [not null, ref: > Rota.id]
+  timestamp timestamptz [not null]
+  lat numeric(9,6)
+  lon numeric(9,6)
+  precisao_m numeric(8,2)
+}
+
+Table FinanceiroTitulo {
+  id uuid [pk]
+  origem text [not null, note: "ENUM: atendimento|pacote"]
+  atendimento_id uuid [ref: > Atendimento.id]
+  paciente_id uuid [ref: > Paciente.id]
+  convenio_id uuid [ref: > Convenio.id]
+  competencia date [not null]
+  prev_recebimento date
+  valor_bruto numeric(12,2) [not null]
+  descontos numeric(12,2) [default: 0]
+  valor_liquido numeric(12,2) // calc. app/sql
+  status text [default: 'aberto', note: "ENUM: aberto|parcial|pago"]
+  recebido_em date
+  nfse_numero text
+}
+
+Table LancamentoFinanceiro {
+  id uuid [pk]
+  titulo_id uuid [not null, ref: > FinanceiroTitulo.id]
+  valor numeric(12,2) [not null]
+  data date [not null]
+  tipo text [note: "ENUM: baixa|glosa|ajuste"]
+  observacao text
+}
+
+/* ========= Plataforma / Conformidade ========= */
+
+Table Consentimento {
+  id uuid [pk]
+  titular_tipo text [note: "ENUM: Paciente|Profissional"]
+  titular_id uuid [not null]
+  tipo text [note: "ENUM: privacidade|marketing|geolocalizacao|dados_saude"]
+  base_legal text
+  versao_documento text
+  ip inet
+  user_agent text
+  timestamp timestamptz [default: `now()`]
+}
+
+Table Consentimento {
+  id uuid [pk]
+  // "Titular" é o dono dos dados (ex.: Paciente, Profissional)
+  titular_tipo text [note: "Paciente|Profissional|Responsavel|Anonimo"]
+  titular_id uuid  // pode ser NULL se Anonimo (cookies antes do login)
+  tipo text [note: "privacidade|cookies|geolocalizacao|dados_saude|marketing|outro"]
+  base_legal text  // ex.: LGPD art. 7/11; art.14 p/ crianças/adolescentes
+  versao_documento text
+  assinado_por_tipo text [note: "Profissional|Responsavel|Paciente|Anonimo"]
+  assinado_por_id uuid // ref p/ Autenticacao/Responsavel/Paciente conforme o caso
+  anon_token text  // ID do cookie/banner quando anônimo
+
+  // capturado_por_autenticacao_id uuid  // quem registrou (operador), se aplicável
+  canal text [note: "app|web|paper|outro"]
+  metodo text [note: "botao_aceito|assinatura_eletronica|checkbox|outro"]
+
+  ip inet
+  user_agent text
+  timestamp timestamptz [default: `now()`]
+}
+
+Table Preferencias {
+  id uuid [pk]
+  autenticacao_id uuid [not null, ref: > Autenticacao.id]
+  settings jsonb
+}
+
+Table Sessao {
+  id uuid [pk]
+  autenticacao_id uuid [not null, ref: > Autenticacao.id]
+  refresh_token_hash text
+  user_agent text
+  ip inet
+  criado_em timestamptz [default: `now()`]
+  expira_em timestamptz
+}
+
+Table Integracao {
+  id uuid [pk]
+  autenticacao_id uuid [not null, ref: > Autenticacao.id]
+  provedor text [note: "ENUM: google_calendar|maps|govbr|icp_brasil"]
+  access_token_encrypted text
+  refresh_token_encrypted text
+  scopes text
+  expires_at timestamptz
+  metadata jsonb
+}
+
+Table Documento {
+  id uuid [pk]
+  tipo text [note: "ENUM: laudo|contrato|foto_ponto|anexo_verificacao|relatorio_assinado"]
+  arquivo_url text [not null]
+  hash_sha256 text
+  criador_id uuid [ref: > Autenticacao.id]
+  created_at timestamptz [default: `now()`]
+}
+
+Table Assinatura {
+  id uuid [pk]
+  alvo_tipo text [note: "ENUM: Timesheet|Relatorio|Atestado|Evolucao"]
+  alvo_id uuid [not null]
+  tipo text [note: "ENUM: simples|avancada|qualificada"]
+  provedor text [note: "ENUM: Gov.br|ICP-Brasil|outro"]
+  assinante_id uuid [ref: > Autenticacao.id]
+  signed_at timestamptz
+  cadeia_cert_json jsonb
+  carimbo_tempo timestamptz
+}
+
+Table Timesheet {
+  id uuid [pk]
+  profissional_id uuid [not null, ref: > Profissional.id]
+  competencia date [not null]
+  minutos_trabalhados int
+  qtde_atendimentos int
+  pdf_documento_id uuid [ref: > Documento.id]
+}
+
+Table Role {
+  id uuid [pk]
+  nome text [unique, not null]
+  descricao text
+  escopos jsonb
+}
+
+Table Permission {
+  id uuid [pk]
+  chave text [unique, not null]
+  descricao text
+}
+
+Table UserRole {
+  id uuid [pk]
+  usuario_id uuid [not null, ref: > Autenticacao.id]
+  role_id uuid [not null, ref: > Role.id]
+  atribuido_por uuid [ref: > Autenticacao.id]
+  atribuido_em timestamptz
+}
+
+Table RolePermission {
+  role_id uuid [not null, ref: > Role.id]
+  permission_id uuid [not null, ref: > Permission.id]
+  Note: 'PK composto (role_id, permission_id)'
+}
+
+Table AccessEvent {
+  id uuid [pk]
+  usuario_id uuid [not null, ref: > Autenticacao.id]
+  alvo_tipo text
+  alvo_id uuid
+  acao text [note: "ENUM: VIEW|EXPORT|UPDATE|DELETE"]
+  resultado text [note: "ENUM: ALLOW|DENY"]
+  timestamp timestamptz [default: `now()`]
+  ip inet
+  user_agent text
+}
+
+Table BreakGlassAccess {
+  id uuid [pk]
+  usuario_id uuid [not null, ref: > Autenticacao.id]
+  paciente_id uuid [ref: > Paciente.id]
+  prontuario_id uuid [ref: > Prontuario.id]
+  motivo text
+  processo_ref text
+  janela_inicio timestamptz
+  janela_fim timestamptz
+  status text [note: "ENUM: ABERTO|APROVADO|ENCERRADO"]
+  aprovado_por uuid [ref: > Autenticacao.id]
+}
+
+Table PolicyVersion {
+  id uuid [pk]
+  tipo text
+  versao text
+  conteudo_url text
+  vigencia_inicio date
+  vigencia_fim date
+}
+
+Table RetentionPolicy {
+  id uuid [pk]
+  entidade text
+  prazo_anos int
+  observacao text
+}
+
+Table DeletionQueue {
+  id uuid [pk]
+  entidade text
+  alvo_id uuid
+  motivo text
+  solicitante_id uuid [ref: > Autenticacao.id]
+  data_execucao timestamptz
+  status text
+}
+
+Table ProfessionalVerification {
+  id uuid [pk]
+  profissional_id uuid [not null, ref: > Profissional.id]
+  crefito_numero text
+  documento_id uuid [ref: > Documento.id]
+  status text [note: "ENUM: PENDENTE|VALIDO|VENCIDO"]
+  verificado_em timestamptz
+  verificado_por uuid [ref: > Autenticacao.id]
+}
+
+Table Notificacao {
+  id uuid [pk]
+  autenticacao_id uuid [ref: > Autenticacao.id]
+  canal text [note: "ENUM: push|email|whatsapp"]
+  destinatario text
+  titulo text
+  corpo text
+  status text [note: "ENUM: fila|enviado|erro"]
+  erro_msg text
+  enviado_em timestamptz
+}
+
+/* ========= Índices úteis ========= */
+
+Ref: Profissional.autenticacao_id > Autenticacao.id
+Ref: Paciente.endereco_id > Endereco.id
+Ref: Paciente.responsavel_id > Paciente.id
+Ref: PacienteConvenio.paciente_id > Paciente.id
+Ref: PacienteConvenio.plano_id > PlanoConvenio.id
+Ref: PlanoConvenio.convenio_id > Convenio.id
+Ref: Agenda.atendimento_id > Atendimento.id
+Ref: Atendimento.paciente_id > Paciente.id
+Ref: Atendimento.profissional_id > Profissional.id
+Ref: Atendimento.local_endereco_id > Endereco.id
+Ref: Prontuario.paciente_id > Paciente.id
+Ref: Prontuario.profissional_responsavel_id > Profissional.id
+Ref: EvolucaoProntuario.prontuario_id > Prontuario.id
+Ref: EvolucaoProntuario.atendimento_id > Atendimento.id
+Ref: EvolucaoProntuario.profissional_id > Profissional.id
+Ref: EvolucaoProntuario.assinatura_id > Assinatura.id
+Ref: Ponto.atendimento_id > Atendimento.id
+Ref: Ponto.profissional_id > Profissional.id
+Ref: Ponto.documento_id > Documento.id
+Ref: Rota.profissional_id > Profissional.id
+Ref: RotaParada.rota_id > Rota.id
+Ref: RotaParada.endereco_id > Endereco.id
+Ref: RotaParada.paciente_id > Paciente.id
+Ref: RotaLog.rota_id > Rota.id
+Ref: FinanceiroTitulo.atendimento_id > Atendimento.id
+Ref: FinanceiroTitulo.paciente_id > Paciente.id
+Ref: FinanceiroTitulo.convenio_id > Convenio.id
+Ref: LancamentoFinanceiro.titulo_id > FinanceiroTitulo.id
+Ref: Preferencias.autenticacao_id > Autenticacao.id
+Ref: Sessao.autenticacao_id > Autenticacao.id
+Ref: Integracao.autenticacao_id > Autenticacao.id
+Ref: Documento.criador_id > Autenticacao.id
+Ref: Timesheet.profissional_id > Profissional.id
+Ref: Timesheet.pdf_documento_id > Documento.id
+Ref: Assinatura.assinante_id > Autenticacao.id
+Ref: UserRole.usuario_id > Autenticacao.id
+Ref: UserRole.role_id > Role.id
+Ref: RolePermission.role_id > Role.id
+Ref: RolePermission.permission_id > Permission.id
+Ref: AccessEvent.usuario_id > Autenticacao.id
+Ref: BreakGlassAccess.usuario_id > Autenticacao.id
+Ref: BreakGlassAccess.paciente_id > Paciente.id
+Ref: BreakGlassAccess.prontuario_id > Prontuario.id
+Ref: BreakGlassAccess.aprovado_por > Autenticacao.id
+Ref: DeletionQueue.solicitante_id > Autenticacao.id
+Ref: ProfessionalVerification.profissional_id > Profissional.id
+Ref: ProfessionalVerification.documento_id > Documento.id
+Ref: ProfessionalVerification.verificado_por > Autenticacao.id
+
