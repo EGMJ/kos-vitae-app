@@ -1,0 +1,50 @@
+# 1) Estrutura de diretórios 
+
+```plaintext
+db/
+  flyway.dev.conf
+  flyway.base.conf
+  init/
+    010_healthcheck.sql
+    post-create.sh
+  migrations/
+    V0001__bootstrap_schemas_and_extensions.sql
+    V0002__plataforma_core.sql
+    V0003__clinico_core.sql
+    V0004__operacao_core.sql
+    V0005__financeiro_core.sql
+    V0006__admin_core.sql
+    V0007__indexes_and_constraints.sql
+    V0008__rls_helpers.sql
+    V0009__rls_policies.sql
+  repeatable/
+    R__views_and_functions.sql
+  seed/
+    VTEST__seed_minimo.sql
+  tests/
+    00_bootstrap/
+      000_plan_basico.sql
+    10_estrutura/
+      101_schemas.sql
+      102_tabelas_basicas.sql
+      103_colunas_tipos_plataforma.sql
+      104_indices_unicos_e_checks.sql
+    20_constraints_fk/
+      201_fk_clinico.sql
+      202_fk_operacao.sql
+      203_fk_financeiro.sql
+    30_rls_policies/
+      301_rls_paciente.sql
+      302_rls_prontuario.sql
+      303_rls_ponto.sql
+    40_fluxos_criticos/
+      401_fluxo_cadastro_profissional.sql
+      402_fluxo_vinculo_paciente_responsavel.sql
+      403_fluxo_ponto_entrada_saida.sql
+      404_fluxo_rotas_do_dia.sql
+      405_fluxo_financeiro_consolidado.sql
+  docs/
+    der.dbml
+```
+
+
