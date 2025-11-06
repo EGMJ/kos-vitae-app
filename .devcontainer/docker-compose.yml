@@ -46,23 +46,27 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   flyway:
-    image: flyway/flyway:10-alpine
+    image: flyway/flyway:10
     container_name: kosvitae-flyway
     depends_on:
       db:
         condition: service_healthy
-    working_dir: /flyway
     volumes:
-      - ../db:/flyway   # esperado: /db/migrations, /db/repeatable e confs dentro de /db
-    environment:
-      FLYWAY_URL: jdbc:postgresql://db:5432/kosvitae
-      FLYWAY_USER: ${POSTGRES_USER:-postgres}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    # Use seus confs se quiser (toml/conf). Se não tiver, essas envs já bastam.
-    command: -locations=filesystem:/flyway/migrations,filesystem:/flyway/repeatable migrate
+      - ../db/migrations:/flyway/sql:ro
+      - ../db/repeatable:/flyway/repeatable:ro
+      - ../db/seed:/flyway/seed:ro
+      - ../db/flyway.base.conf:/flyway/conf/flyway.base.conf:ro
+      - ../db/flyway.dev.conf:/flyway/conf/flyway.dev.conf:ro
+    command: >
+      -configFiles=/flyway/conf/flyway.base.conf,/flyway/conf/flyway.dev.conf
+      -locations=filesystem:/flyway/sql,filesystem:/flyway/repeatable,filesystem:/flyway/seed
+      -connectRetries=10
+      migrate
+
 
   api:
     build:
