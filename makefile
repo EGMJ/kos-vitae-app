@@ -53,3 +53,18 @@ check-rls:
 	@rm -f /tmp/rls.sql
 
 .PHONY: db-up db-down migrate repair api-up web-up app-up logs psql check-rls
+
+
+# testes
+
+# Executa todos os testes pgTAP (estrutura, constraints, RLS, fluxos)
+test:
+	$(COMPOSE) run --rm pgtap
+
+# Executa um arquivo/pasta de testes específicos (ex.: tests/clinico)
+test-%:
+	$(COMPOSE) run --rm pgtap bash -lc "pg_prove -v /tests/$*/**/*.sql || true"
+
+# Só prepara extensão pgtap no banco (útil no 1º run)
+pgtap-ext:
+	$(COMPOSE) exec -T db psql -U $(DB_USER) -d $(DB_NAME) -c 'CREATE EXTENSION IF NOT EXISTS pgtap;'

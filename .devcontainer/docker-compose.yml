@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:16
+    build:
+      context: ..
+      dockerfile: .devcontainer/db.dockerfile
     container_name: kosvitae-db
     environment:
       POSTGRES_USER: postgres
@@ -17,6 +19,23 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 30
+
+  pgtap:
+    image: ringingmountain/pgtap
+    container_name: kosvitae-pgtap
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: kosvitae
+    volumes:
+      - ../db/tests:/tests:ro
+    # Roda todos *.sql dos testes (pode filtrar por pasta)
+    command: ["bash", "-lc", "pg_prove -v /tests/**/*.sql"]
       
   pgadmin:
     image: dpage/pgadmin4:8
