@@ -27,6 +27,9 @@ repair:   ## Repara histórico (checksums) se necessário
 # -------------------------
 # App: API e Web
 # -------------------------
+api-build:  ## Rebuild da imagem da API (quando requirements.txt muda)
+	$(COMPOSE) build api
+
 api-up:
 	$(COMPOSE) up -d api
 
@@ -68,3 +71,15 @@ test-%:
 # Só prepara extensão pgtap no banco (útil no 1º run)
 pgtap-ext:
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d $(DB_NAME) -c 'CREATE EXTENSION IF NOT EXISTS pgtap;'
+
+# -------------------------
+# API: dev helpers
+# -------------------------
+api-logs:  ## Logs da API em tempo real
+	$(COMPOSE) logs -f api
+
+api-restart:  ## Restart da API (reload rápido)
+	$(COMPOSE) restart api
+
+api-shell:  ## Shell interativo no container da API
+	$(COMPOSE) exec api bash

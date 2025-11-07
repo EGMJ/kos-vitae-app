@@ -73,7 +73,7 @@ services:
       context: ..
       dockerfile: .devcontainer/api.dockerfile
     container_name: kosvitae-api
-    command: ["bash","-lc","cd apps/api && /home/vscode/.venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000 --reload"]
+    command: ["bash","-lc","cd apps/api && /home/vscode/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/kosvitae
       PYTHONUNBUFFERED: "1"
