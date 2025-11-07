@@ -30,6 +30,12 @@ repair:   ## Repara histórico (checksums) se necessário
 api-build:  ## Rebuild da imagem da API (quando requirements.txt muda)
 	$(COMPOSE) build api
 
+api-rebuild:  ## Rebuild completo (limpa volume e rebuilda)
+	$(COMPOSE) down api
+	docker volume rm -f devcontainer_api_venv || true
+	$(COMPOSE) build --no-cache api
+	$(COMPOSE) up -d api
+
 api-up:
 	$(COMPOSE) up -d api
 
