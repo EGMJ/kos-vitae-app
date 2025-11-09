@@ -2,4 +2,10 @@ fastapi
 uvicorn[standard]
 psycopg[binary]
 SQLAlchemy>=2
+pydantic-settings
+python-jose[cryptography]
+python-multipart
+prometheus-fastapi-instrumentator
+structlog
+apscheduler
 python-dotenv
