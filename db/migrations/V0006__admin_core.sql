@@ -1,6 +1,6 @@
 CREATE TABLE admin.role (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome text UNIQUE NOT NULL,    -- admin, gestor, profissional, responsavel...
+  nome text UNIQUE NOT NULL,   
   descricao text,
   escopos jsonb
 );

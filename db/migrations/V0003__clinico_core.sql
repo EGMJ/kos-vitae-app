@@ -35,7 +35,6 @@ CREATE TABLE clinico.paciente (
   updated_at timestamptz DEFAULT now()
 );
 
--- Responsável dedicado (não precisa ser paciente)
 CREATE TABLE clinico.responsavel (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nome text NOT NULL,
@@ -51,7 +50,7 @@ CREATE TABLE clinico.paciente_responsavel (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   paciente_id uuid NOT NULL REFERENCES clinico.paciente(id) ON DELETE CASCADE,
   responsavel_id uuid NOT NULL REFERENCES clinico.responsavel(id) ON DELETE CASCADE,
-  tipo_vinculo text,                  -- pai, mãe, tutor, curador...
+  tipo_vinculo text,                  
   representacao_legal boolean DEFAULT true,
   inicio_vigencia date,
   fim_vigencia date,
@@ -70,7 +69,7 @@ CREATE TABLE clinico.prontuario (
 CREATE TABLE clinico.evolucao_prontuario (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   prontuario_id uuid NOT NULL REFERENCES clinico.prontuario(id) ON DELETE CASCADE,
-  atendimento_id uuid, -- ref operacao.atendimento.id (criada em V0004)
+  atendimento_id uuid, 
   profissional_id uuid REFERENCES clinico.profissional(id),
   anamnese text, avaliacao text, diagnostico text, intervencao text, evolucao text,
   registrado_em timestamptz DEFAULT now(),

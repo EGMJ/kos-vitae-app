@@ -295,11 +295,3 @@ CREATE POLICY p_sec_admin ON admin.security_setting FOR ALL USING (plataforma.ap
 
 ALTER TABLE admin.incident ENABLE ROW LEVEL SECURITY;
 CREATE POLICY p_inc_admin ON admin.incident FOR ALL USING (plataforma.app_is_admin()) WITH CHECK (plataforma.app_is_admin());
-
-
-
--- > **Conceitos**:
--- >
--- > * Ative RLS na tabela com `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`. (Doc: RLS/CREATE POLICY) ([PostgreSQL][5])
--- > * **USING** limita linhas *visíveis* (SELECT/DELETE/UPDATE). **WITH CHECK** limita linhas *inseridas/atualizadas* (INSERT/UPDATE). ([PostgreSQL][6])
--- > * Você pode ter várias *policies* por tabela; por padrão elas são **permissive** (OR lógico). (Doc) ([PostgreSQL][5])

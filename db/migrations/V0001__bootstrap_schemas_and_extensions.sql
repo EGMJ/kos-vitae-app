@@ -4,9 +4,9 @@ CREATE SCHEMA IF NOT EXISTS operacao;
 CREATE SCHEMA IF NOT EXISTS financeiro;
 CREATE SCHEMA IF NOT EXISTS admin;
 
-CREATE EXTENSION IF NOT EXISTS citext;            -- :contentReference[oaicite:1]{index=1}
-CREATE EXTENSION IF NOT EXISTS pg_trgm;           -- :contentReference[oaicite:2]{index=2}
-CREATE EXTENSION IF NOT EXISTS pgcrypto;          -- para gen_random_uuid()  :contentReference[oaicite:3]{index=3}
+CREATE EXTENSION IF NOT EXISTS citext;         
+CREATE EXTENSION IF NOT EXISTS pg_trgm;           
+CREATE EXTENSION IF NOT EXISTS pgcrypto;          
 
 DO $$
 BEGIN

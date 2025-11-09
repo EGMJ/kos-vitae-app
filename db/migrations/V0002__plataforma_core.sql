@@ -1,7 +1,6 @@
--- Usuários/contas, sessões, integrações e documentos
 CREATE TABLE plataforma.autenticacao (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email citext UNIQUE NOT NULL,        -- citext para case-insensitive
+  email citext UNIQUE NOT NULL,     
   senha_hash text,
   provedor_oauth text CHECK (provedor_oauth IN ('google','apple')),
   oauth_sub text,
@@ -64,15 +63,15 @@ CREATE TABLE plataforma.assinatura (
 
 CREATE TABLE plataforma.consentimento (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  titular_tipo text,     -- Paciente|Profissional|Responsavel|Anonimo
-  titular_id uuid,       -- NULL se Anonimo
-  tipo text,             -- privacidade|cookies|geolocalizacao|dados_saude|...
+  titular_tipo text,     
+  titular_id uuid,       
+  tipo text,             
   base_legal text,
   versao_documento text,
-  assinado_por_tipo text,  -- Profissional|Responsavel|Paciente|Anonimo
-  assinado_por_id uuid,    -- quem clicou/assinou
-  anon_token text,         -- id do banner/cookie (anônimo)
-  canal text, metodo text, -- app|web|paper / botao_aceito|assinatura_eletronica...
+  assinado_por_tipo text,  
+  assinado_por_id uuid,   
+  anon_token text,     
+  canal text, metodo text, 
   ip inet, user_agent text,
   timestamp timestamptz DEFAULT now()
 );
@@ -105,7 +104,7 @@ CREATE TABLE plataforma.deletion_queue (
 
 CREATE TABLE plataforma.professional_verification (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  profissional_id uuid NOT NULL, -- ref clinico.profissional.id (criada em V0003)
+  profissional_id uuid NOT NULL, 
   crefito_numero text,
   documento_id uuid REFERENCES plataforma.documento(id),
   status text CHECK (status IN ('PENDENTE','VALIDO','VENCIDO')),
@@ -124,8 +123,3 @@ CREATE TABLE plataforma.notificacao (
   erro_msg text,
   enviado_em timestamptz
 );
-
-
--- > **Por que `citext`?** É um tipo *case-insensitive* nativo do Postgres que evita ter que usar `LOWER()` em toda consulta/índice e permite **unicidade** insensível a maiúsculas/minúsculas (ideal para e-mails/usuários). É *locale-aware* como `text`. ([PostgreSQL][2])
--- > **UUID**: use `gen_random_uuid()` (pgcrypto) ou `uuid_generate_v4()` (uuid-ossp) como `DEFAULT` da PK. ([PostgreSQL][3])
--- > **pg_trgm**: habilita busca por similaridade e índices para *fuzzy search* em nomes/e-mails. ([PostgreSQL][4])

@@ -1,6 +1,6 @@
 CREATE TABLE operacao.agenda (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  atendimento_id uuid, -- ref operacao.atendimento.id (abaixo)
+  atendimento_id uuid,
   titulo text,
   inicio timestamptz NOT NULL,
   fim timestamptz NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE operacao.ponto (
   timestamp timestamptz NOT NULL,
   lat numeric(9,6), lon numeric(9,6), precisao_m numeric(8,2),
   dispositivo_id text, observacao text,
-  documento_id uuid REFERENCES plataforma.documento(id)  -- opcional (comprovante/foto)
+  documento_id uuid REFERENCES plataforma.documento(id)  
 );
 
 CREATE TABLE operacao.rota (
